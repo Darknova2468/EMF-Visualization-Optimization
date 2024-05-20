@@ -32,9 +32,7 @@ class Wire:
     #gets the field strength of a point around a straight wire
     def get(self, point):
         #applys translations relative to world origin
-        x = point[0]+self.location[0]
-        y = point[1]+self.location[1]
-        z = point[2]+self.location[2]
+        x, y, z = np.add(point, self.location)
 
         #initializes fieldstrength array
         fieldStrength = [0] * 3
@@ -54,10 +52,10 @@ class Wire:
         magnitude = MU*self.current*integral/(4*m.pi*a)
         
         #finds the angle to rotate the az plane vector
-        phi = m.atan2(y, z)
+        phi = m.atan2(z, y)
         
         #rotates vector back into our cartisien space
-        fieldStrength[1] = magnitude*m.sin(phi)
+        fieldStrength[1] = -magnitude*m.sin(phi)
         fieldStrength[2] = magnitude*m.cos(phi)
 
         #returns vector
@@ -67,13 +65,14 @@ class Wire:
 myCoil = Coil()
 
 #adds elements
-myCoil.addElement(Wire(10, [0,0,0], [0,0,0], 1))
+myCoil.addElement(Wire(10, [0,-0.5, 0.0], [0,0,0],  1))
+myCoil.addElement(Wire(10, [0,0.5, 0.0], [0,0,0], -1))
 
 # Fixed x value for the yz-plane
 x_fixed = 0
 
 # Set the grid width and generate the grid points for the yz-plane
-w = 1
+w = 2
 Z, Y = np.mgrid[-w:w:500j, -w:w:500j]
 
 # Initialize arrays for J and K components of the vector field

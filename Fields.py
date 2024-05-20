@@ -1,3 +1,4 @@
+#libraries
 import numpy as np # type: ignore
 import math as m
 
@@ -29,17 +30,16 @@ class Wire:
         self.current = _current
     #gets the field strength of a point around a straight wire
     def get(self, point):
-        #applys translations relative to world origin
-        x, y, z = np.add(point, self.location)
-
-        #initializes fieldstrength array
-        fieldStrength = [0] * 3
+        #applys translations and rotations relative to model origin
+        x, y, z = np.subtract(point, self.location)
+        x, y = rotate(x, y, -self.orientation[0]*m.pi/180)
+        x, z = rotate(x, z, -self.orientation[1]*m.pi/180)
 
         #orients plane so that we are on the ax plane
         a = m.sqrt(y**2+z**2)
 
         #if the point P lies on the wire field strength is always zero therfore the function returns zero to avoid a divide by zero error
-        if(a == 0): return(fieldStrength)
+        if(a == 0): return([0] * 3)
 
         #calculates the bounds of the integral
         thetaMin = m.atan2(x-self.length*0.5, a)
@@ -52,9 +52,19 @@ class Wire:
         #finds the angle to rotate the az plane vector
         phi = m.atan2(z, y)
         
-        #rotates vector back into our cartisien space
-        fieldStrength[1] = -magnitude*m.sin(phi)
-        fieldStrength[2] = magnitude*m.cos(phi)
+        #rotates vector back into our models cartisien space
+        u = 0
+        v = -magnitude*m.sin(phi)
+        w = magnitude*m.cos(phi)
 
+        #rotates vector back into world space
+        u, v = rotate(u, v, self.orientation[0]*m.pi/180)
+        u, w = rotate(u, w, self.orientation[1]*m.pi/180)
+        
         #returns vector
-        return fieldStrength
+        return [u, v, w]
+    
+def rotate(x, y, theta):
+    u = x*m.cos(theta)-y*m.sin(theta)
+    v = x*m.sin(theta)+y*m.cos(theta)
+    return [u, v]

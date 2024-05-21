@@ -20,7 +20,6 @@ class Coil:
             fieldStrength =  np.add(fieldStrength, self.elements[i].get(point))
         return fieldStrength
         
-
 class Wire:
     #initializes all the parameters of the straight wire
     def __init__(self, _length, _location, _orientation, _current):
@@ -63,7 +62,8 @@ class Wire:
         
         #returns vector
         return [u, v, w]
-    
+
+#rotates a point [x, y] on its respective plane by an angle theta  
 def rotate(x, y, theta):
     u = x*m.cos(theta)-y*m.sin(theta)
     v = x*m.sin(theta)+y*m.cos(theta)

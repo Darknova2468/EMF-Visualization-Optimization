@@ -37,14 +37,11 @@ class plot:
         # Calculate the magnitude of the vector field
         magnitude = np.sqrt(U**2 + V**2)
         #plots Vector Field
-        plt.figure()
-        myPlot = plt.streamplot(I, J, U, V, color=magnitude, linewidth=2, cmap='viridis')
-        plt.colorbar(label='FieldStrength (T)')
-        plt.title(plane + ' Plane EMF Field')
-        plt.xlabel(plane[0])
-        plt.ylabel(plane[1])
+        fig, ax = plt.subplots(figsize=(3, 3))
+        strm = ax.streamplot(I, J, U, V, color=magnitude, linewidth=1, cmap='viridis')
+        fig.colorbar(strm.lines, label='Field Strength (T)')
+        ax.set_title(f'{plane} Plane EMF Field')
+        ax.set_xlabel(plane[0])
+        ax.set_ylabel(plane[1])
 
-        return myPlot
-    def showPlot(self, plane, pos, offset): 
-        self.getPlot(plane, pos, offset)
-        plt.show()
+        return fig

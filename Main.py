@@ -4,13 +4,10 @@ import Fields as f
 import Plots as p
 
 #initializes the "coil" an array of wire elements
-myCoil = f.Coil()
-
-#adds elements for a square loop of wire
-myCoil.addElement(f.Wire(4, [0,2, 0.0], [0,0], 1))
-myCoil.addElement(f.Wire(4, [2,0, 0.0], [270,0], 1))
-myCoil.addElement(f.Wire(4, [0,-2, 0.0], [180,0], 1))
-myCoil.addElement(f.Wire(4, [-2,0, 0.0], [90,0], 1))
+myCoil = f.RectCoil(0.2, 0.1, 0.1, 0.025, 0.002588)
 
 #runs Application
-myApplication = u.newApplication(myCoil, 100)
+print(myCoil.current)
+print(f'{myCoil.get([0,0,0.0125])}T at N pole')
+print(f'{myCoil.get([0,0,-0.0125])}T at S pole')
+myApplication = u.newApplication(myCoil, 50)

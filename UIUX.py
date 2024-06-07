@@ -1,5 +1,5 @@
 #libraries
-import GPUFieldsExp as p
+import Plots as p
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
@@ -23,9 +23,9 @@ class newApplication:
         #starts and labels window
         self.window = tk.Tk()
         self.window.title("Magnetic Field Plots")
-        self.window.geometry("920x720")
-        self.window.minsize(920, 720)
-        self.window.maxsize(920, 720)
+        self.window.geometry("1920x1080")
+        self.window.minsize(1920, 1080)
+        self.window.maxsize(1920, 1080)
 
         #creates a grid for vector field graphs
         self.frame = tk.Frame(self.window)
@@ -75,22 +75,25 @@ class newApplication:
     #fills the input frame with a vector field plot from Plots.py
     def update_plot(self, plane, row, column):
         startTime = time.time()
-        x = self.coil.dim[0]*1.5
-        y = self.coil.dim[1]*1.5
-        z = self.coil.dim[2]*1.5
+        x = self.coil.dim[0]*2
+        y = self.coil.dim[1]*2
+        z = self.coil.dim[2]*2
         a = max(x, y, z)
         pos = [[-a, a],[-a, a]]
-        offset = 0
-        if(plane == "XY"): offset = 0.0125
+        offset = global_slider_values[plane]
         fig = self.plot.getPlot(plane, pos, offset)
+
         canvas = FigureCanvasTkAgg(fig, master=self.frame)
         canvas.draw()
-        canvas.get_tk_widget().grid(row=row, column=column, padx=10, pady=10, sticky="nsew")
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.grid(row=row, column=column, padx=100, pady=10, sticky="W")
+        canvas_widget.configure(width=500, height=400)
+
         print(f'{startTime - time.time()}s for {plane} at resolution:{self.plot.resolution}')
 
     def create_slider(self, row, column, plane):
-        self.slider_frame = tk.Frame(self.control_frames[row][column])
-        self.slider_frame = tk.Frame(self.control_frames[row][column])
+        self.slider_frame = tk.Frame(self.control_frames[row][column], padx=100)
+        self.slider_frame = tk.Frame(self.control_frames[row][column], padx=100)
         self.slider_frame.pack(side=tk.LEFT, fill=tk.Y, expand=False)
         self.slider = tk.Scale(self.slider_frame, from_=-3, to=3, orient="vertical", length=300, resolution=0.1, command=lambda val: self.update_global_variable(plane, float(val)))
         self.slider.pack(side=tk.LEFT, fill=tk.Y, expand=True)
@@ -98,4 +101,4 @@ class newApplication:
 
     def update_global_variable(self, plane, value):
         global_slider_values[plane] = value
-        print(f"Updated {plane} plane slider value: {value}")
+        

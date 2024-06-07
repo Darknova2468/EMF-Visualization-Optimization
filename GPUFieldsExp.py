@@ -1,8 +1,8 @@
 # Libraries
 import matplotlib.pyplot as plt  # type: ignore
+import numpy as np
 import cupy as cp
 import math as m
-import logging
 
 # Magnetic permeability of free space
 MU = 4 * m.pi * 10**-7
@@ -20,24 +20,19 @@ class RectCoil:
                 self.elements.append(Wire(_y+(n+1)*_dia, [-_x+(n+0.5)*_dia, 0, -(z+0.5)*_dia], [90, 0]))
         self.dim = [_x+_w*2, _y+_w*2, _z]
         self.constants = MU * self.current / (4 * m.pi)
+
     # Gets the field strength of a point around the coil
-    def get(self, plane):
-        logger = logging.getLogger()
-        logger.error(f"HEY IM RUNNING!")
-        u, v, w = self.elements[0].get(plane)
+    def get(self, x, y, z):
+        u, v, w = self.elements[0].get(x, y, z)
         for i in range(1, len(self.elements)):
-            u1, v1, w1 = self.elements[i].get(plane)
+            u1, v1, w1 = self.elements[i].get(x, y, z)
             u += u1
             v += v1
             w += w1
-            
         u *= self.constants
         v *= self.constants
         w *= self.constants
-        logger.error(f"Finished Lol")
-        return u, v, w
-
-
+        return cp.stack((u, v, w), axis=-1)
 
 class Wire:
     # Initializes all the parameters of the straight wire
@@ -52,13 +47,15 @@ class Wire:
                              [m.sin(-_orientation[1] * m.pi / 180), m.cos(-_orientation[1] * m.pi / 180)]]
 
     # Gets the field strength of a point around a straight wire
-    def get(self, plane):
-        xyz = plane - self.location
+    def get(self, x, y, z):
+        x = x - self.location[0]
+        y = y - self.location[1]
+        z = z - self.location[2]
 
-        x1, y = self.rotate(xyz[:,:,0], xyz[:,:,1], self.rOrientation[0])
-        x2, z = self.rotate(x1, xyz[:,:,2], self.rOrientation[1])
+        x1, y1 = self.rotate(x, y, self.rOrientation[0])
+        x2, z1 = self.rotate(x1, z, self.rOrientation[1])
 
-        a = cp.linalg.norm(cp.stack((y,z), axis=1), axis=1)
+        a = cp.linalg.norm(cp.stack((y1,z1), axis=1), axis=1)
 
         endPoint1 = x2-(self.length*0.5)
         endPoint2 = x2+(self.length*0.5)
@@ -68,14 +65,14 @@ class Wire:
 
         integral = (cp.sin(thetaMax)-cp.sin(thetaMin))/a
 
-        phi = cp.arctan2(z, y)
+        phi = cp.arctan2(z1, y1)
 
-        x = cp.zeros_like(a)
-        y = -integral*cp.sin(phi)
-        z = integral*cp.cos(phi)
+        i = cp.zeros_like(a)
+        j = -integral*cp.sin(phi)
+        k = integral*cp.cos(phi)
 
-        u1, v = self.rotate(x, y, self.fOrientation[0])
-        u2, w = self.rotate(u1, z, self.fOrientation[1])
+        u1, v = self.rotate(i, j, self.fOrientation[0])
+        u2, w = self.rotate(u1, k, self.fOrientation[1])
 
         return u2, v, w
     #rotates a point [x, y] on its respective plane by an angle theta  
@@ -89,31 +86,34 @@ class plot:
         self.coil = _coil
         self.resolution = _resolution
 
-    def getPlot(self, plane, pos, offset):
-        # Set the grid width and generate the grid points for the plane (Generates Points)
-        I_values = cp.linspace(pos[0][0], pos[0][1], self.resolution)
-        J_values = cp.linspace(pos[1][0], pos[1][1], self.resolution)
-        I, J = cp.meshgrid(I_values, J_values)
-        K = cp.full_like(I, offset)
-
-        if plane == "XY":
-            # Apply the vector field function to each point in the XY-plane
-            grid = cp.stack((I, J, K), axis=-1)
-        elif plane == "YZ":
-            # Apply the vector field function to each point in the YZ-plane
-            grid = cp.stack((K, I, J), axis=-1)
-        elif plane == "XZ":
-            # Apply the vector field function to each point in the XZ-plane
-            grid = cp.stack((I, K, J), axis=-1)
+    def getBField(self, pos):
+        # Generate linearly spaced points for each axis
+        I = cp.linspace(pos[0][0], pos[0][1], self.resolution)
+        J = cp.linspace(pos[1][0], pos[1][1], self.resolution)
+        K = cp.linspace(pos[2][0], pos[2][1], self.resolution)
         
-        X, Y, Z = self.coil.get(grid)
+        # Generate the mesh grid
+        X, Y, Z = cp.meshgrid(I, J, K)
 
+        # Compute the B field at the meshgrid points
+        self.B_Field = self.coil.get(X, Y, Z)
+    
+    def getPlane(self, plane, pos, offset):
         if plane == "XY":
-            U, V = X, Y
+            step = (pos[2][1] - pos[2][0]) / (self.resolution - 1)
+            index = int((offset - pos[2][0]) / step)
+            U = self.B_Field[:, :, index, 0]
+            V = self.B_Field[:, :, index, 1]
         elif plane == "YZ":
-            U, V = Y, Z
+            step = (pos[0][1] - pos[0][0]) / (self.resolution - 1)
+            index = int((offset - pos[0][0]) / step)
+            U = self.B_Field[:, :, index, 1]
+            V = self.B_Field[:, :, index, 2]
         elif plane == "XZ":
-            U, V = X, Z
+            step = (pos[1][1] - pos[1][0]) / (self.resolution - 1)
+            index = int((offset - pos[1][0]) / step)
+            U = self.B_Field[:, :, index, 0]
+            V = self.B_Field[:, :, index, 2]
 
         # Calculate the magnitude of the vector field
         magnitude = cp.sqrt(U**2 + V**2)
@@ -121,12 +121,12 @@ class plot:
         # Convert CuPy arrays to NumPy arrays for plotting
         U_np = cp.asnumpy(U)
         V_np = cp.asnumpy(V)
-        I_np = cp.asnumpy(I_values)
-        J_np = cp.asnumpy(J_values)
+        X = np.linspace(pos[0][0], pos[0][1], self.resolution)
+        I_np, J_np = np.meshgrid(X, X)
         magnitude_np = cp.asnumpy(magnitude)
 
         # Plots Vector Field
-        fig, ax = plt.subplots(figsize=(3, 3))
+        fig, ax = plt.subplots(figsize=(pos[0][1], pos[1][1]))
         strm = ax.streamplot(I_np, J_np, U_np, V_np, color=magnitude_np, linewidth=1, cmap='viridis')
         fig.colorbar(strm.lines, label='Field Strength (T)')
         ax.set_title(f'{plane} Plane EMF Field')

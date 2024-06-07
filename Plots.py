@@ -37,7 +37,6 @@ class plot:
         
         # Calculate the magnitude of the vector field
         magnitude = np.sqrt(U**2 + V**2)
-        print(U, V)
         #plots Vector Field
         fig, ax = plt.subplots(figsize=(3, 3))
         strm = ax.streamplot(I, J, U, V, color=magnitude, linewidth=1, cmap='viridis')

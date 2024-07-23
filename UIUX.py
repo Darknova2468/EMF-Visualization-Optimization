@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from tkinter import ttk
-from multiprocess import process as mp
 import time
 
 # Define global variables for slider values

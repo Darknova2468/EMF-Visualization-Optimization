@@ -22,9 +22,9 @@ class newApplication:
         #starts and labels window
         self.window = tk.Tk()
         self.window.title("Magnetic Field Plots")
-        self.window.geometry("1920x1080")
+        self.window.geometry("960x640")
         self.window.minsize(1920, 1080)
-        self.window.maxsize(1920, 1080)
+        self.window.maxsize(960,640)
 
         #creates a grid for vector field graphs
         self.frame = tk.Frame(self.window)
